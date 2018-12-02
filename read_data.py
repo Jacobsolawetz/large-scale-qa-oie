@@ -4,6 +4,9 @@
 Created on Mon Nov  5 12:30:22 2018
 
 @author: jacobsolawetz
+
+
+Code to convert the large scale QA-SRL dataset to open information extraction Conll format.  
 """
 
 import codecs
