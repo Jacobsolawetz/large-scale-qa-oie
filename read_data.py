@@ -306,6 +306,10 @@ class QASRL_extractor():
                         #cur.getSortedArgs()
                         print cur.conll(external_feats = [1,2])
                         ### now to get the ordering down
+                        ### seems like now and from before, the arguments are in the order they appear in the qa file... 
+                        ### get sent and word ID 
+                        
+                        
                         
                         
                         
