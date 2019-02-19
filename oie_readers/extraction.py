@@ -129,7 +129,10 @@ class Extraction:
                 logging.debug("Not one argument: {}".format(args))
                 continue
             arg = args[0]
-            indices = list(self.indsForQuestions[q].union(arg.indices))
+            logging.debug("question input: {}".format(q))
+            logging.debug("question input: {}".format(self.indsForQuestions[q]))
+            logging.debug("indices: {}".format(arg.indices))
+            indices = arg.indices#list(self.indsForQuestions[q].union(arg.indices))
             if not indices:
                 logging.debug("Empty indexes for arg {} -- backing to zero".format(arg))
                 indices = [0]

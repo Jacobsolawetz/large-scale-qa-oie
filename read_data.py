@@ -93,6 +93,8 @@ class QASRL_extractor():
         self.qa_path = qa_path
         self.output_file = output_file
         self.min_correct = min_correct
+        #for the creation of question dist
+        self.extractions = []
 
     def read(self):
         
@@ -104,7 +106,7 @@ class QASRL_extractor():
                                              in dist.iteritems()]))
                                    for (q, dist)
                                    in json.load(open(self.dist_file)).iteritems()]) \
-                                       if dist_file\
+                                       if self.dist_file\
                                           else {}
         ##pull sentence##
         ##pull predicate##
@@ -300,15 +302,15 @@ class QASRL_extractor():
 
                         #print 'arguments', (preproc_arg,indices), q
                         cur.resolveAmbiguity()
-                        print sentence
-                        print q_as
+                        ###########print sentence
+                        ###########print q_as
                         
                         #cur.getSortedArgs()
-                        print cur.conll(external_feats = [1,2])
+                        #############print cur.conll(external_feats = [1,2])
                         ### now to get the ordering down
                         ### seems like now and from before, the arguments are in the order they appear in the qa file... 
                         ### get sent and word ID 
-                        
+                        self.extractions.append(cur)
                         
                         
                         
