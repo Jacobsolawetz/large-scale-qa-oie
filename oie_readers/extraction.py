@@ -7,6 +7,7 @@ import itertools
 import logging
 import numpy as np
 import pdb
+import json
 
 class Extraction:
     """
@@ -22,7 +23,10 @@ class Extraction:
         self.questions = {}
         self.indsForQuestions = defaultdict(lambda: set())
         self.is_mwp = False
-        self.question_dist = question_dist
+        if question_dist:
+            json_file = open(question_dist)
+            json_str = json_file.read()
+            self.question_dist = json.loads(json_str)
         self.index = index
         #print '++++++++INIT+++++++++'
 
@@ -137,6 +141,7 @@ class Extraction:
                 logging.debug("Empty indexes for arg {} -- backing to zero".format(arg))
                 indices = [0]
             ls.append(((arg, q), indices))
+
         return [a for a, _ in sorted(ls,
                                      key = lambda (_, indices): min(indices))]
 
@@ -208,6 +213,13 @@ class Extraction:
         logging.debug("Linearizing arg list: {}".format(ret))
 
         # Finished iterating - consolidate and return a list of arguments
+        print self.args
+        #assign args to the new sorted format
+        self.args = [(arg[0].words , arg[0].indices[0])
+                for (_, arg_ls) in sorted(ret.iteritems(),
+                                          key = lambda (k, v): int(k))
+                for arg in arg_ls]
+
         return [arg
                 for (_, arg_ls) in sorted(ret.iteritems(),
                                           key = lambda (k, v): int(k))

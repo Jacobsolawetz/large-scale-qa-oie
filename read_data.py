@@ -83,7 +83,7 @@ QA_SRL_AUX_MODIFIERS = [
 
 
 class QASRL_extractor():
-    
+
 #useful link
 #https://github.com/nafitzgerald/nrl-qasrl/blob/master/nrl/data/dataset_readers/qasrl_reader.py
 
@@ -97,10 +97,8 @@ class QASRL_extractor():
         self.extractions = []
 
     def read(self):
-        
         ###What to do about generalized questions that are not yet in this distribution set?####
         ###Use analyze.py####
-        
         question_dist = dict([(q, dict([(int(loc), cnt)
                                              for (loc, cnt)
                                              in dist.iteritems()]))
@@ -112,22 +110,19 @@ class QASRL_extractor():
         ##pull predicate##
         ##pull qa pairs with 5/6 or more validations##
         ##possibly preprocess at this step##
-        
         #load json lines data into list
         qa_path = self.qa_path
         data = []
         with codecs.open(qa_path, 'r', encoding='utf8') as f:
             for line in f:
                 data.append(json.loads(line))
-        
-        
+
         verb_types = []
         #parse qa data
         for item in data[0:200]:
             sent_id = item["sentenceId"]
             sentence_tokens = item["sentenceTokens"]
             sentence = ' '.join(sentence_tokens)
-            
 
             for _, verb_entry in item["verbEntries"].items():
                 verb_index = verb_entry["verbIndex"]
@@ -137,32 +132,22 @@ class QASRL_extractor():
                 answer_list = []
                 questions = []
 
-                
-                
                 for _, question_label in verb_entry["questionLabels"].items():
-                    
                     answers = len(question_label["answerJudgments"])
                     valid_answers = len([ans for ans in question_label["answerJudgments"] if ans["isValid"]])
-                    
                     if valid_answers/answers < 1:
                         #do not log this question set
                         continue
-                    
                     q_string = question_label['questionString']
                     ans_spans = []
                     for ans in question_label["answerJudgments"]:
                         if ans["isValid"]:
                             for span in ans["spans"]:
                                 ans_spans.append(span)
-                  
                     consolidated_spans = consolidate_answers(ans_spans)
                     #look up answers in sentence tokens
                     lookup_ans = lambda ans, sentence: ' '.join(sentence[ans[0]:ans[1]])
                     consolidated_ans = map(lookup_ans, consolidated_spans, [sentence_tokens]*len(consolidated_spans))
-                    
-                    
-                    
-                    
                     #here we can acquire of the question slots
                     wh = question_label["questionSlots"]["wh"].split()
                     wh = '_'.join(wh)
@@ -170,34 +155,28 @@ class QASRL_extractor():
                     aux = '_'.join(aux)
                     subj = question_label["questionSlots"]["subj"].split()
                     subj = '_'.join(subj)
-                    
                     #iterate through and check verb types for len > 2
                     verb_type = question_label['questionSlots']['verb']
-                    
                     inflected_verb = verb_inflected_forms[verb_type.split()[-1]]
-                    
                     if len(verb_type.split()) == 1:
                         trg =  inflected_verb
                     else:
                         trg = verb_type.split()[:-1]
                         trg.append(inflected_verb)
                         trg = "_".join(trg)
-                        
                     obj1 = question_label["questionSlots"]["obj"].split()
                     obj1 = '_'.join(obj1)
                     pp = question_label["questionSlots"]["prep"].split()
                     pp = '_'.join(pp)
                     obj2 = question_label["questionSlots"]["obj2"].split()
                     obj2 = '_'.join(obj2)
-                    
-                    
-                    slotted_q = " ".join((wh,aux,subj,trg,obj1,pp,obj2,"?"))                    
-                    
+
+                    slotted_q = " ".join((wh,aux,subj,trg,obj1,pp,obj2,"?"))
+
                     curSurfacePred = augment_pred_with_question(base_pred, slotted_q)
                     if len(curSurfacePred) > len(surfacePred):
                         surfacePred = curSurfacePred
-                    
-                    
+
                     questions.append(slotted_q)
                     answer_list.append(consolidated_ans)
                     #for ans in consolidated_spans:
@@ -247,41 +226,33 @@ class QASRL_extractor():
                 ##These organisms need the oxygen plants release to get energy out of the food .
                 #[(u'what _ _ needs something _ _ ?', u'organisms'), (u'why does something need something _ _ ?', u'to get energy out of the food'), (u'what does something need _ _ _ ?', u'oxygen'), (u'what does someone need something for _ ?', u'to get energy out of the food')]
                 #need    need    organisms       oxygen  for to get energy out of the food       to get energy out of the food
-                
                 #Considering the following edits - for each argument, only take the first question that appears for it
                 #Considering the following edits - Only consider an answer span if it apoears by more than one annotator. Rare answers tend to be misleading
-                
                 sentence = sentence.encode('utf-8')
                 surfacePred = surfacePred.encode('utf-8')
                 base_pred = base_pred.encode('utf-8')
                 #pred_indices = all_index(sentence, base_pred, matchCase = False)
-                
                 augmented_pred_indices = fuzzy_match_phrase(surfacePred.split(" "),
                                                                sentence.split(" "))
                 #print augmented_pred_indices
-                
                 if not augmented_pred_indices:
                     #find equivalent of pred_index
                     head_pred_index = [verb_index]
 
                 else:
                     head_pred_index = augmented_pred_indices[0]
-                
                 for ans_set in list(itertools.product(*answer_list)):
-                    
                     cur = Extraction((surfacePred, [head_pred_index]), 
                                  verb_index,
                                  sentence,
-                                 confidence = 1.0
+                                 confidence = 1.0,
+                                 question_dist = self.dist_file
                                  )
-                    
                     #print 'Extraction', (surfacePred, [head_pred_index]), verb_index, sentence
-                     
                     q_as = zip(questions,ans_set)
                     if len(q_as) == 0:
                         continue
                     for q_a in q_as:
-                        
                         q = q_a[0].encode('utf-8')
                         a = q_a[1].encode('utf-8')
                         preproc_arg = self.preproc(a)
@@ -289,36 +260,26 @@ class QASRL_extractor():
                             logging.warn("Argument reduced to None: {}".format(a))
                         indices = fuzzy_match_phrase(preproc_arg.split(" "),
                                                  sentence.split(" "))
-                        
                         #print 'q', q, 'preproc arg', preproc_arg, 'indices ', indices
                         cur.addArg((preproc_arg,indices),q)
-                    
-                    
-                    
+
                     if cur.noPronounArgs():
-                       
-                        
-                        
 
                         #print 'arguments', (preproc_arg,indices), q
                         cur.resolveAmbiguity()
-                        ###########print sentence
-                        ###########print q_as
-                        
-                        #cur.getSortedArgs()
-                        #############print cur.conll(external_feats = [1,2])
+                        print sentence
+                        print q_as
+
+                        cur.getSortedArgs()
+                        print cur.conll(external_feats = [1,2])
                         ### now to get the ordering down
                         ### seems like now and from before, the arguments are in the order they appear in the qa file... 
                         ### get sent and word ID 
                         self.extractions.append(cur)
-                        
-                        
-                        
-                        
                        # print cur.noPronounArgs()
                     #print q_as
                     #print cur.__str__()
-                        
+
 #                print 'pred ', surfacePred
 #                print 'pred indices ', pred_indices
 #                print 'sentence ', sentence
@@ -329,19 +290,17 @@ class QASRL_extractor():
           - Removes duplicates spaces, to allow for space delimited words.
         """
         return " ".join([w for w in s.split(" ") if w])
-    
-    
+
+
 def consolidate_answers(answers):
     """
     For a given list of answers, returns only minimal answers - e.g., ones which do not
     contain any other answer in the set.
     This deals with certain QA-SRL anntoations which include a longer span than that is needed.
     """
-    
     '''
     Also requires that each answer overlap with at least one other valid answer in order to remove errant answers
     '''
-    
     ret = []
     for i, span1 in enumerate(answers):
         includeFlag = True
@@ -492,10 +451,7 @@ def semi_process(s, force_ascii=False):
 
 if __name__ == '__main__':
     qa_path = 'dev_orig.jsonl'
-    dist_file = 'dist_wh_sbj_obj1.json'
+    dist_file = 'q_dist_test.json'
     output_file = 'not_implemented'
     QASRL_extractor = QASRL_extractor(qa_path, output_file, dist_file, min_correct = 5/6)
     QASRL_extractor.read()
-                    
-                    
-                    
