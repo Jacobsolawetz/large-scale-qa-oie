@@ -70,10 +70,12 @@ if __name__ == "__main__":
     #logging.debug(args)
     #fin = args['--in']
     #fout = args['--out']
-    qa_path = 'dev_orig.jsonl'
-    dist_file = 'dist_wh_sbj_obj1.json'
-    output_file = 'not_implemented'
-    QASRL_extractor = QASRL_extractor(qa_path, output_file, dist_file, min_correct = 5/6)
+    qa_path = 'test.jsonl'
+    dist_file = ''
+    output_file = 'q_dist_test.json'
+    write = False
+    min_correct = 5/6
+    QASRL_extractor = QASRL_extractor(qa_path, output_file, dist_file, write, min_correct)
     QASRL_extractor.read()
 
 
@@ -91,6 +93,6 @@ if __name__ == "__main__":
 
     # Write to file
     #logging.info("Writing output to file: {}".format(fout))
-    analyzer.output_dist_to_file("q_dist_test.json")
+    analyzer.output_dist_to_file(output_file)
 
     #logging.info("DONE!")

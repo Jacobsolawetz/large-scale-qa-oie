@@ -27,6 +27,11 @@ from operator import itemgetter
 import pdb
 
 
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
+
+
 
 
 QUESTION_TRG_INDEX =  3 # index of the predicate within the question
@@ -88,13 +93,15 @@ class QASRL_extractor():
 #https://github.com/nafitzgerald/nrl-qasrl/blob/master/nrl/data/dataset_readers/qasrl_reader.py
 
 ##a helper class to read the new QA-SRL data format 
-    def __init__(self, qa_path, output_file, dist_file, min_correct = 5/6):
+    def __init__(self, qa_path, output_file, dist_file, write, sort, min_correct = 5/(6 * 1.0)):
         self.dist_file = dist_file
         self.qa_path = qa_path
         self.output_file = output_file
         self.min_correct = min_correct
         #for the creation of question dist
         self.extractions = []
+        self.write = write
+        self.sort = sort
 
     def read(self):
         ###What to do about generalized questions that are not yet in this distribution set?####
@@ -117,10 +124,16 @@ class QASRL_extractor():
             for line in f:
                 data.append(json.loads(line))
 
+
+        f_out = open(self.output_file, "w")
         verb_types = []
         #parse qa data
-        for item in data[0:200]:
-            sent_id = item["sentenceId"]
+        for item in data:
+        #for item in data[(len(data)-100):(len(data) - 1)]:
+            sent_id = item["sentenceId"].encode('utf-8')
+            #remove science
+            if sent_id.split(':')[0] == 'TQA':
+                continue
             sentence_tokens = item["sentenceTokens"]
             sentence = ' '.join(sentence_tokens)
 
@@ -133,9 +146,10 @@ class QASRL_extractor():
                 questions = []
 
                 for _, question_label in verb_entry["questionLabels"].items():
+                    print(question_label["answerJudgments"])
                     answers = len(question_label["answerJudgments"])
                     valid_answers = len([ans for ans in question_label["answerJudgments"] if ans["isValid"]])
-                    if valid_answers/answers < 1:
+                    if valid_answers/(answers* 1.0)  < self.min_correct:
                         #do not log this question set
                         continue
                     q_string = question_label['questionString']
@@ -267,11 +281,13 @@ class QASRL_extractor():
 
                         #print 'arguments', (preproc_arg,indices), q
                         cur.resolveAmbiguity()
-                        print sentence
-                        print q_as
-
-                        cur.getSortedArgs()
-                        print cur.conll(external_feats = [1,2])
+                        if self.write:
+                            print sentence
+                            print q_as
+                            if self.sort:
+                                cur.getSortedArgs()
+                            f_out.write(cur.conll(external_feats = [1,2]))
+                            f_out.write('\n')
                         ### now to get the ordering down
                         ### seems like now and from before, the arguments are in the order they appear in the qa file... 
                         ### get sent and word ID 
@@ -294,12 +310,15 @@ class QASRL_extractor():
 
 def consolidate_answers(answers):
     """
+    Depracated: this method now returns the longest span in order to capture information lost from
+    truncating to the shortest span.
+
     For a given list of answers, returns only minimal answers - e.g., ones which do not
     contain any other answer in the set.
     This deals with certain QA-SRL anntoations which include a longer span than that is needed.
     """
     '''
-    Also requires that each answer overlap with at least one other valid answer in order to remove errant answers
+    Deprecated: Also requires that each answer overlap with at least one other valid answer in order to remove errant answers
     '''
     ret = []
     for i, span1 in enumerate(answers):
@@ -311,7 +330,7 @@ def consolidate_answers(answers):
         for j, span2 in enumerate(answers):
             if (i != j):
                 if span1 != span2:
-                    if range(span2[0],span2[1])[0] in range(span1[0],span1[1]) and range(span2[0],span2[1])[-1] in range(span1[0],span1[1]):
+                    if range(span1[0],span1[1])[0] in range(span2[0],span2[1]) and range(span1[0],span1[1])[-1] in range(span2[0],span2[1]):
                         includeFlag = False
                 if range(span1[0],span1[1])[0] in range(span2[0],span2[1]) or range(span1[0],span1[1])[-1] in range(span2[0],span2[1]):
                     overlapFlag = True
@@ -450,8 +469,10 @@ def semi_process(s, force_ascii=False):
 
 
 if __name__ == '__main__':
-    qa_path = 'dev_orig.jsonl'
-    dist_file = 'q_dist_test.json'
-    output_file = 'not_implemented'
-    QASRL_extractor = QASRL_extractor(qa_path, output_file, dist_file, min_correct = 5/6)
+    qa_path = 'test2.jsonl'
+    dist_file = ''
+    output_file = 'test_delete.conll'
+    write = True
+    sort = True
+    QASRL_extractor = QASRL_extractor(qa_path, output_file, dist_file, write, sort)
     QASRL_extractor.read()
