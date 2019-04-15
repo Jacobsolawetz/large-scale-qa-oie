@@ -93,7 +93,7 @@ class QASRL_extractor():
 #https://github.com/nafitzgerald/nrl-qasrl/blob/master/nrl/data/dataset_readers/qasrl_reader.py
 
 ##a helper class to read the new QA-SRL data format 
-    def __init__(self, qa_path, output_file, dist_file, write, sort, min_correct = 5/(6 * 1.0)):
+    def __init__(self, qa_path, output_file, dist_file, write, length, sort, min_correct = 5/(6 * 1.0)):
         self.dist_file = dist_file
         self.qa_path = qa_path
         self.output_file = output_file
@@ -102,6 +102,7 @@ class QASRL_extractor():
         self.extractions = []
         self.write = write
         self.sort = sort
+        self.length = length
 
     def read(self):
         ###What to do about generalized questions that are not yet in this distribution set?####
@@ -158,7 +159,8 @@ class QASRL_extractor():
                         if ans["isValid"]:
                             for span in ans["spans"]:
                                 ans_spans.append(span)
-                    consolidated_spans = consolidate_answers(ans_spans)
+                    #add long/short flag here
+                    consolidated_spans = consolidate_answers(ans_spans, self.length)
                     #look up answers in sentence tokens
                     lookup_ans = lambda ans, sentence: ' '.join(sentence[ans[0]:ans[1]])
                     consolidated_ans = map(lookup_ans, consolidated_spans, [sentence_tokens]*len(consolidated_spans))
@@ -308,34 +310,56 @@ class QASRL_extractor():
         return " ".join([w for w in s.split(" ") if w])
 
 
-def consolidate_answers(answers):
+def consolidate_answers(answers, length):
     """
-    Depracated: this method now returns the longest span in order to capture information lost from
+    #########Deprecated: this method now returns the longest span in order to capture information lost from
     truncating to the shortest span.
+
+    Returns the shortest or the longest span among options
 
     For a given list of answers, returns only minimal answers - e.g., ones which do not
     contain any other answer in the set.
     This deals with certain QA-SRL anntoations which include a longer span than that is needed.
     """
     '''
-    Deprecated: Also requires that each answer overlap with at least one other valid answer in order to remove errant answers
+    Does also require that each answer overlap with at least one other valid answer in order to remove errant answers
     '''
     ret = []
-    for i, span1 in enumerate(answers):
-        includeFlag = True
-        overlapFlag = False
-        if span1 in ret:
-            includeFlag = False
-            continue
-        for j, span2 in enumerate(answers):
-            if (i != j):
-                if span1 != span2:
-                    if range(span1[0],span1[1])[0] in range(span2[0],span2[1]) and range(span1[0],span1[1])[-1] in range(span2[0],span2[1]):
-                        includeFlag = False
-                if range(span1[0],span1[1])[0] in range(span2[0],span2[1]) or range(span1[0],span1[1])[-1] in range(span2[0],span2[1]):
-                    overlapFlag = True
-        if includeFlag and overlapFlag:
-            ret.append(span1)
+    if length == 'short':
+        for i, span1 in enumerate(answers):
+            includeFlag = True
+            overlapFlag = False
+            if span1 in ret:
+                includeFlag = False
+                continue
+            for j, span2 in enumerate(answers):
+                if (i != j):
+                    if span1 != span2:
+                        if range(span2[0],span2[1])[0] in range(span1[0],span1[1]) and range(span2[0],span2[1])[-1] in range(span1[0],span1[1]):
+                            includeFlag = False
+                    if range(span1[0],span1[1])[0] in range(span2[0],span2[1]) or range(span1[0],span1[1])[-1] in range(span2[0],span2[1]):
+                         overlapFlag = True
+            if includeFlag and overlapFlag:
+                ret.append(span1)
+    else:
+        for i, span1 in enumerate(answers):
+            includeFlag = True
+            overlapFlag = False
+            if span1 in ret:
+                includeFlag = False
+                continue
+            for j, span2 in enumerate(answers):
+                if (i !=j):
+                    if span1 != span2:
+                        if range(span1[0], span1[1])[0] in range(span2[0],span2[1]) and range(span1[0],span1[1])[-1] in range(span2[0],span2[1]):
+                            #the candidate span is then contained in another
+                            includeFlag = False
+                    if range(span1[0],span1[1])[0] in range(span2[0],span2[1]) or range(span1[0],span1[1])[-1] in range(span2[0],span2[1]):
+                        #then the candidate span overlaps with at least one other
+                        overlapFlag = True
+            if includeFlag and overlapFlag:
+                ret.append(span1)
+
     return ret
 
 
@@ -469,10 +493,11 @@ def semi_process(s, force_ascii=False):
 
 
 if __name__ == '__main__':
-    qa_path = 'test2.jsonl'
+    qa_path = 'expand/train.jsonl'
     dist_file = ''
-    output_file = 'test_delete.conll'
+    output_file = 'ls_short_sort_expand_train.conll'
     write = True
     sort = True
-    QASRL_extractor = QASRL_extractor(qa_path, output_file, dist_file, write, sort)
+    length = 'short'
+    QASRL_extractor = QASRL_extractor(qa_path, output_file, dist_file, write, length, sort)
     QASRL_extractor.read()

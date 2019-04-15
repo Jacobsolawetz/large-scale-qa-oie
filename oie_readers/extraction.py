@@ -27,6 +27,8 @@ class Extraction:
             json_file = open(question_dist)
             json_str = json_file.read()
             self.question_dist = json.loads(json_str)
+        else:
+            self.question_dist = question_dist
         self.index = index
         #print '++++++++INIT+++++++++'
 
@@ -141,7 +143,9 @@ class Extraction:
                 logging.debug("Empty indexes for arg {} -- backing to zero".format(arg))
                 indices = [0]
             ls.append(((arg, q), indices))
-
+        self.args = [(a[0].words , a[0].indices[0]) for a, _ in sorted(ls,
+                                     key = lambda (_, indices): min(indices))]
+        print self.args
         return [a for a, _ in sorted(ls,
                                      key = lambda (_, indices): min(indices))]
 
@@ -213,7 +217,7 @@ class Extraction:
         logging.debug("Linearizing arg list: {}".format(ret))
 
         # Finished iterating - consolidate and return a list of arguments
-        print self.args
+        #print self.args
         #assign args to the new sorted format
         self.args = [(arg[0].words , arg[0].indices[0])
                 for (_, arg_ls) in sorted(ret.iteritems(),
@@ -409,8 +413,10 @@ class Extraction:
         ##     how much	had	_	been taken	_	_	_	?	topping $ 3 billion
         ## In these cases we heuristically choose the shorter answer span, hopefully creating minimal spans
         ## E.g., in this example two arguemnts are created: (loan commitments, topping $ 3 billion)
+        #EDIT: in order to tag arguments sequentially, we take the first elem_ind
 
-        elem_ind, elem = min(ent, key = lambda (_, ls): len(ls))
+
+        elem_ind, elem = min(ent, key = lambda (ls, _): ls)
 
         # Distinguish between predicate and arguments
         prefix = "P" if elem_ind == 0 else "A{}".format(elem_ind - 1)
