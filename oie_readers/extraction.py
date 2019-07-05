@@ -156,10 +156,9 @@ class Extraction:
         """
         gen_question = generalize_question(question)
         q_dist = self.question_dist[gen_question]
-        logging.debug("distribution of {}: {}".format(gen_question,
+        print("distribution of {}: {}".format(gen_question,
                                                       q_dist))
-
-        return float(q_dist.get(loc, 0)) /  \
+        return float(q_dist.get(str(loc), 0)) /  \
             sum(q_dist.values())
 
     def sort_args_by_distribution(self):
@@ -175,6 +174,7 @@ class Extraction:
         2.1 Assign to it the most probable slot still available
         2.2 If non such exist (fallback) - default to put it in the last location
         """
+        print('sorting_by_distribution')
         INF_LOC = 100 # Used as an impractical last argument
 
         # Store arguments by slot
@@ -182,7 +182,7 @@ class Extraction:
         logging.debug("sorting: {}".format(self.questions))
 
         # Find the most suitable arguemnt for the subject location
-        logging.debug("probs for subject: {}".format([(q, self.question_prob_for_loc(q, 0))
+        print("probs for subject: {}".format([(q, self.question_prob_for_loc(q, 0))
                                                       for (q, _) in self.questions.iteritems()]))
 
         subj_question, subj_args = max(self.questions.iteritems(),
@@ -428,8 +428,8 @@ class Extraction:
 
     def __str__(self):
         return '{0}\t{1}'.format(self.elementToStr(self.pred,
-                                                   print_indices = True),
-                                 '\t'.join([self.elementToStr(arg)
+                                                   print_indices = False),
+                                 '\t'.join([self.elementToStr(arg, print_indices = False)
                                             for arg
                                             in self.args]))
 
@@ -458,6 +458,10 @@ def generalize_question(question):
     """
     import nltk   # Using nltk since couldn't get spaCy to agree on the tokenization
     wh, aux, sbj, trg, obj1, pp, obj2 = question.split(' ')[:-1] # Last split is the question mark
+    if sbj == 'someone':
+        sbj = 'something'
+    if obj1 == 'someone':
+        obj1 = 'something'
     return ' '.join([wh, sbj, obj1])
 
 

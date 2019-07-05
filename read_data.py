@@ -93,7 +93,7 @@ class QASRL_extractor():
 #https://github.com/nafitzgerald/nrl-qasrl/blob/master/nrl/data/dataset_readers/qasrl_reader.py
 
 ##a helper class to read the new QA-SRL data format 
-    def __init__(self, qa_path, output_file, dist_file, write, length, sort, min_correct = 5/(6 * 1.0)):
+    def __init__(self, qa_path, output_file, dist_file, write, length, sort, output_eval, min_correct = 5/(6 * 1.0)):
         self.dist_file = dist_file
         self.qa_path = qa_path
         self.output_file = output_file
@@ -103,6 +103,7 @@ class QASRL_extractor():
         self.write = write
         self.sort = sort
         self.length = length
+        self.output_eval = output_eval
 
     def read(self):
         ###What to do about generalized questions that are not yet in this distribution set?####
@@ -127,6 +128,8 @@ class QASRL_extractor():
 
 
         f_out = open(self.output_file, "w")
+        jsonl_out = open('eval_sent.jsonl',"w")
+        eval_out = open('eval.oie',"w")
         verb_types = []
         #parse qa data
         for item in data:
@@ -137,6 +140,9 @@ class QASRL_extractor():
                 continue
             sentence_tokens = item["sentenceTokens"]
             sentence = ' '.join(sentence_tokens)
+            sentence = sentence.encode('utf-8')
+            if output_eval:
+                jsonl_out.write("{" + '"' + "sentence" + '"' + ": " + '"' +  sentence + '"' + "}" + '\n')
 
             for _, verb_entry in item["verbEntries"].items():
                 verb_index = verb_entry["verbIndex"]
@@ -147,7 +153,7 @@ class QASRL_extractor():
                 questions = []
 
                 for _, question_label in verb_entry["questionLabels"].items():
-                    print(question_label["answerJudgments"])
+                    #print(question_label["answerJudgments"])
                     answers = len(question_label["answerJudgments"])
                     valid_answers = len([ans for ans in question_label["answerJudgments"] if ans["isValid"]])
                     if valid_answers/(answers* 1.0)  < self.min_correct:
@@ -195,6 +201,7 @@ class QASRL_extractor():
 
                     questions.append(slotted_q)
                     answer_list.append(consolidated_ans)
+                    #print wh, subj, obj1
                     #for ans in consolidated_spans:
                         #question_answer_pairs.append((slotted_q,' '.join(sentence_tokens[ans[0]:ans[1]])))
 
@@ -226,15 +233,11 @@ class QASRL_extractor():
 #                             verb = verb_type.split()[0] + " " + inflected_verb
 #                     
 # =============================================================================
-            
                     ##now we have sentence tokens, verb index, valid question, valid answer spans
                     ##need question blanks for augement pred with question 
-                    
-                    
                 ###for each predicate - create a list of qa pairs, s.t. each unique combination of questions and answers appear
                 ### e.g. 2 quesions each with 2 answers, leads to four qa pairs ((q1,a1),(q2,a1)), ((q1,a1),(q2,a2)), ect.
                 ### each one of these sets will lead to an extraction                
- 
                 ##noticing many instances where the rare answer doesn't make sense
                 ##e.g. Clouds that form on the ground are called fog
 
@@ -244,7 +247,6 @@ class QASRL_extractor():
                 #need    need    organisms       oxygen  for to get energy out of the food       to get energy out of the food
                 #Considering the following edits - for each argument, only take the first question that appears for it
                 #Considering the following edits - Only consider an answer span if it apoears by more than one annotator. Rare answers tend to be misleading
-                sentence = sentence.encode('utf-8')
                 surfacePred = surfacePred.encode('utf-8')
                 base_pred = base_pred.encode('utf-8')
                 #pred_indices = all_index(sentence, base_pred, matchCase = False)
@@ -284,15 +286,23 @@ class QASRL_extractor():
                         #print 'arguments', (preproc_arg,indices), q
                         cur.resolveAmbiguity()
                         if self.write:
-                            print sentence
-                            print q_as
+                            #print sentence
+                            #print q_as
                             if self.sort:
                                 cur.getSortedArgs()
+                            #print(cur.conll(external_feats = [1,2]))
                             f_out.write(cur.conll(external_feats = [1,2]))
                             f_out.write('\n')
                         ### now to get the ordering down
                         ### seems like now and from before, the arguments are in the order they appear in the qa file... 
-                        ### get sent and word ID 
+                        ### get sent and word ID
+                        ### generating an output file for downstream evaluation on OIE-2016
+                        ### evaluation framework
+                        if self.output_eval:
+                            if self.sort:
+                                cur.getSortedArgs()
+                            eval_out.write(sentence + ' \t' + cur.__str__() + '\n')
+
                         self.extractions.append(cur)
                        # print cur.noPronounArgs()
                     #print q_as
@@ -493,11 +503,14 @@ def semi_process(s, force_ascii=False):
 
 
 if __name__ == '__main__':
-    qa_path = 'expand/train.jsonl'
-    dist_file = ''
-    output_file = 'ls_short_sort_expand_train.conll'
-    write = True
+    qa_path = 'orig/test.jsonl'
+    dist_file = 'q_dist_orig_train.json'
+    output_file = 'test.conll'
+    #output_file = 'ls_long_sort_orig_qdist_science_dev.conll'
+    write = False
     sort = True
-    length = 'short'
-    QASRL_extractor = QASRL_extractor(qa_path, output_file, dist_file, write, length, sort)
+    length = 'long'
+    output_eval = True
+    QASRL_extractor = QASRL_extractor(qa_path, output_file, dist_file, write, length, sort,
+                                      output_eval)
     QASRL_extractor.read()
