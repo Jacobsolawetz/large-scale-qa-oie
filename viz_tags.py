@@ -13,7 +13,8 @@ if __name__ == "__main__":
     args = docopt(__doc__)
     input_fn = args["--in"]
     output_fn = args["--out"]
-    df = pd.read_csv(input_fn, sep = "\t", skip_blank_lines = False, header = None)
+    df = pd.read_csv(input_fn, sep = "\t", skip_blank_lines = True, header = None)
+    print(df.groupby(7).count())
     ax = df.groupby(7).count()[1].plot.pie(autopct='%1.1f%%')
     ax.set_title('distribution of tag labels')
     pp = PdfPages(output_fn)

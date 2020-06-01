@@ -70,12 +70,14 @@ if __name__ == "__main__":
     #logging.debug(args)
     #fin = args['--in']
     #fout = args['--out']
-    qa_path = 'test.jsonl'
+    qa_path = 'orig/test.jsonl'
     dist_file = ''
-    output_file = 'q_dist_test.json'
+    output_file = 'q_dist_orig_science_test.json'
     write = False
+    length = 'long'
+    sort = True
     min_correct = 5/6
-    QASRL_extractor = QASRL_extractor(qa_path, output_file, dist_file, write, min_correct)
+    QASRL_extractor = QASRL_extractor(qa_path, output_file, dist_file, write, length, sort,  min_correct)
     QASRL_extractor.read()
 
 

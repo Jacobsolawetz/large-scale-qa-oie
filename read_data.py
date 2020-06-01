@@ -128,15 +128,15 @@ class QASRL_extractor():
 
 
         f_out = open(self.output_file, "w")
-        jsonl_out = open('eval_sent.jsonl',"w")
-        eval_out = open('eval.oie',"w")
+        jsonl_out = open('science_eval_sent.jsonl',"w")
+        eval_out = open('science_eval.oie',"w")
         verb_types = []
         #parse qa data
         for item in data:
         #for item in data[(len(data)-100):(len(data) - 1)]:
             sent_id = item["sentenceId"].encode('utf-8')
             #remove science
-            if sent_id.split(':')[0] == 'TQA':
+            if sent_id.split(':')[0] != 'TQA':
                 continue
             sentence_tokens = item["sentenceTokens"]
             sentence = ' '.join(sentence_tokens)
@@ -504,8 +504,8 @@ def semi_process(s, force_ascii=False):
 
 if __name__ == '__main__':
     qa_path = 'orig/test.jsonl'
-    dist_file = 'q_dist_orig_train.json'
-    output_file = 'test.conll'
+    dist_file = 'q_dist_orig_science_test.json'
+    output_file = 'science_test.conll'
     #output_file = 'ls_long_sort_orig_qdist_science_dev.conll'
     write = False
     sort = True
